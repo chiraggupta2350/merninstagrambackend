@@ -3,10 +3,12 @@ const router = express.Router();
 const mongoose = require("mongoose");
 const requireLogin = require("../middleware/requireLogin");
 const Post = require("../models/postSchema");
+const moment = require("moment");
 
 router.get("/allpost",requireLogin,(req,res)=>{
     Post.find()
     .populate("postedBy","_id name")
+    .sort({ dateCreated:-1 })
     .then((posts)=>{
         res.json({posts})
     }).catch((err)=>{
@@ -30,12 +32,14 @@ router.post("/createpost",requireLogin,(req,res)=>{
     if(!title || !body || !pic ){
         return res.status(422).json({error:"plz add all the fields"})
     }
+    const dateCreated = moment(new Date()).format("YYYY-MM-DD hh:mm:ss")
     req.user.password = undefined
     const post = new Post({
         title,
         body,
         photo:pic,
-        postedBy:req.user
+        postedBy:req.user,
+        dateCreated
     })
     post.save().then((result)=>{
        res.json({post:result})
@@ -80,7 +84,6 @@ router.put("/unlike",requireLogin,(req,res)=>{
     })
 })
 router.put("/comment",requireLogin,(req,res)=>{
-    console.log("req,res===============",req.body)
     const comment = {
         text:req.body.text,
         postedBy:req.user._id
@@ -101,34 +104,14 @@ router.put("/comment",requireLogin,(req,res)=>{
     })
 })
 router.delete("/deletepost/:postId",requireLogin,(req,res)=>{
-    // Post.findOne({_id:req.params.postId})
-    // .populate("postedBy","_id")
-    // .exec((err,post)=>{
-    //     if(err || !post){
-    //         return res.status(422).json({error:err})
-    //     }
-    //     if(post.postedBy._id.toString() === req.user._id.toString()){
-    //         post.remove()
-    //         .then(result=>{
-    //             res.json(result)
-    //         }).catch(err=>{
-    //             console.log(err)
-    //         })
-    //     }
-    // })
-
     Post.remove({_id:req.params.postId})
     .exec((err,post)=>{
         if(err){
             return res.status(422).json({error:err})
         }else{
-
-            console.log("post============",post)
             res.json(post)
         }
     })
-
-
 })
 
 module.exports = router;
